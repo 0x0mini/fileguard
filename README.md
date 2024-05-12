@@ -1,1 +1,7 @@
-# fileguard
+This Rust-based web server is designed to serve as a robust and efficient solution for handling file encryption and decryption through API requests. It is meticulously crafted to support file uploads, allowing users to send files securely to the server. Once uploaded, users can specify encryption or decryption operations via API calls, which the server then executes with utmost precision.
+
+The server employs state-of-the-art cryptographic techniques to ensure the security and integrity of the data being processed. It is capable of handling a diverse range of file formats, making it incredibly versatile for different use cases. Whether you are looking to secure sensitive documents, protect multimedia files, or safeguard any other type of data, this server stands ready to assist.
+
+Beyond its core functionalities, the server is also equipped to respond to user queries, offering insights into the processes it performs and the status of requested operations. This interaction is facilitated through a well-documented API, which outlines the various endpoints available and how to use them effectively.
+
+At its heart, this project is about providing a secure, reliable, and user-friendly platform for file encryption and decryption services, leveraging the power and safety of Rust to ensure high performance and security. Whether for personal use, within an organization, or as part of a larger software ecosystem, this server is an invaluable tool for anyone needing to protect their digital assets.
