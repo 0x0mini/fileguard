@@ -4,7 +4,7 @@ use actix_web::{middleware, post, web, App, HttpResponse, HttpServer, Responder}
 use futures::StreamExt;
 use std::env;
 use std::fs::File;
-use std::io::Write;
+use std::io::{self, Write};
 use std::process::Command;
 
 struct AppState {
@@ -14,50 +14,44 @@ struct AppState {
 
 #[post("/encrypt")]
 async fn encrypt(mut payload: Multipart, data: web::Data<AppState>) -> impl Responder {
-    while let Some(item) = payload.next().await {
-        let mut field = item.unwrap();
-        let filepath = format!("./{}", field.content_disposition().get_filename().unwrap());
-        let mut f = File::create(filepath.clone()).unwrap();
-
-        while let Some(chunk) = field.next().await {
-            let data = chunk.unwrap();
-            f.write_all(&data).unwrap();
-        }
-
-        let output = Command::new(&data.encrypt_tool_path)
-            .arg(&filepath)
-            .output()
-            .expect("failed to execute process");
-
-        return match output.status.success() {
-            true => HttpResponse::Ok().body("File encrypted successfully"),
-            false => HttpResponse::InternalServerError().body("Encryption failed"),
-        };
-    }
-
-    HttpResponse::BadRequest().body("No file uploaded")
+    process_file(&mut payload, &data.encrypt_tool_path, "File encrypted successfully", "Encryption failed").await
 }
 
 #[post("/decrypt")]
 async fn decrypt(mut payload: Multipart, data: web::Data<AppState>) -> impl Responder {
+    process_file(&mut payload, &data.decrypt_tool_path, "File decrypted successfully", "Decryption failed").await
+}
+
+async fn process_file(payload: &mut Multipart, tool_path: &str, success_message: &str, error_message: &str) -> impl Responder {
     while let Some(item) = payload.next().await {
-        let mut field = item.unwrap();
-        let filepath = format!("./{}", field.content_disposition().get_filename().unwrap());
-        let mut f = File::create(filepath.clone()).unwrap();
+        let mut field = match item {
+            Ok(f) => f,
+            Err(_) => return HttpResponse::BadRequest().body("Invalid file upload"),
+        };
+        let filepath = match field.content_disposition().get_filename() {
+            Some(name) => format!("./{}", name),
+            None => return HttpResponse::BadRequest().body("Filename missing from content disposition"),
+        };
+        let mut f = match File::create(&filepath) {
+            Ok(file) => file,
+            Err(_) => return HttpResponse::InternalServerError().body("Failed to create file"),
+        };
 
         while let Some(chunk) = field.next().await {
-            let data = chunk.unwrap();
-            f.write_all(&data).unwrap();
+            match chunk {
+                Ok(data) => {
+                    if let Err(_) = f.write_all(&data) {
+                        return HttpResponse::InternalServerError().body("Failed to write file");
+                    }
+                }
+                Err(_) => return HttpResponse::BadRequest().body("Error in file chunks"),
+            };
         }
 
-        let output = Command::new(&data.decrypt_tool_path)
-            .arg(&filepath)
-            .output()
-            .expect("failed to execute process");
-
-        return match output.status.success() {
-            true => HttpResponse::Ok().body("File decrypted successfully"),
-            false => HttpResponse::InternalServerError().body("Decryption failed"),
+        let output = match Command::new(tool_path).arg(&filepath).output() {
+            Ok(output) if output.status.success() => return HttpResponse::Ok().body(success_message),
+            Ok(_) => return HttpResponse::InternalServerError().body(error_message),
+            Err(_) => return HttpResponse::InternalServerError().body("Failed to execute process"),
         };
     }
 
