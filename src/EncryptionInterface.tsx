@@ -1,50 +1,51 @@
 import React, { useState } from 'react';
 
-interface EncryptionStandard {
+interface IEncryptionOption {
   value: string;
   label: string;
 }
 
-const encryptionStandards: EncryptionStandard[] = [
+const encryptionOptions: IEncryptionOption[] = [
   { value: 'AES', label: 'AES' },
   { value: 'RSA', label: 'RSA' },
   { value: 'Blowfish', label: 'Blowfish' },
 ];
 
-const EncryptionInterface: React.FC = () => {
-  const [selectedEncryption, setSelectedEncryption] = useState<string>('');
-  const [file, setFile] = useState<File | null>(null);
-  const [progress, setProgress] = useState<number>(0);
-  const [error, setError] = useState<string>('');
+const FileEncryptionTool: React.FC = () => {
+  const [encryptionMethod, setEncryptionMethod] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [encryptionProgress, setEncryptionProgress] = useState<number>(0);
+  const [encryptionError, setEncryptionError] = useState<string>('');
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectedFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      setFile(event.target.files[0]);
+      setSelectedFile(event.target.files[0]);
     }
   };
 
-  const handleEncryptionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedEncryption(event.target.value);
+  const handleEncryptionMethodChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setEncryptionMethod(event.target.value);
   };
 
-  const startEncryption = async () => {
-    if (!file || !selectedEncryption) {
-      setError('File and encryption standard must be selected');
+  const initiateEncryptionProcess = async () => {
+    if (!selectedFile || !encryptionMethod) {
+      setEncryptionError('Both file and encryption method must be selected.');
       return;
     }
 
-    setError('');
-    setProgress(0);
+    setEncryptionError('');
+    setEncryptionProgress(0);
 
     try {
       for (let i = 0; i <= 100; i += 10) {
-        setProgress(i);
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Mock progress
+        setEncryptionProgress(i);
+        await new Promise((resolve) => setTimeout(resolve, 100)); // Simulating encryption progress
       }
 
-      alert('File encrypted successfully');
-    } catch (e: any) {
-      setError(e.message || 'An error occurred during encryption');
+      alert('File encrypted successfully.');
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : 'An unknown error occurred during encryption.';
+      setEncryptionError(errorMsg);
     }
   };
 
@@ -53,26 +54,26 @@ const EncryptionInterface: React.FC = () => {
       <h2>Encrypt Your File</h2>
       <label htmlFor="file-upload">
         Upload a file:
-        <input type="file" id="file-upload" onChange={handleFileChange} />
+        <input type="file" id="file-upload" onChange={handleSelectedFileChange} />
       </label>
       <br />
-      <label htmlFor="encryption-standard">
-        Select Encryption Standard:
-        <select id="encryption-standard" value={selectedEncryption} onChange={handleEncryptionChange}>
+      <label htmlFor="encryption-method">
+        Select Encryption Method:
+        <select id="encryption-method" value={encryptionMethod} onChange={handleEncryptionMethodChange}>
           <option value="">Select an option</option>
-          {encryptionStandards.map((standard) => (
-            <option key={standard.value} value={standard.value}>
-              {standard.label}
+          {encryptionOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
       </label>
       <br />
-      <button onClick={startEncryption}>Start Encryption</button>
-      {progress > 0 && <div>Encryption Progress: {progress}%</div>}
-      {error && <div style={{ color: 'red' }}>Error: {error}</div>}
+      <button onClick={initiateEncryptionProcess}>Start Encryption</button>
+      {encryptionProgress > 0 && <div>Encryption Progress: {encryptionProgress}%</div>}
+      {encryptionError && <div style={{ color: 'red' }}>Error: {encryptionError}</div>}
     </div>
   );
 };
 
-export default EncryptionInterface;
+export default FileEncryptionTool;
