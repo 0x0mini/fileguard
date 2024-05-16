@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 
 interface IEncryptionOption {
   value: string;
@@ -11,23 +11,23 @@ const encryptionOptions: IEncryptionOption[] = [
   { value: 'Blowfish', label: 'Blowfish' },
 ];
 
-const FileEncryptionTool: React.FC = () => {
+const FileEncryptionTool: React.FC = memo(() => {
   const [encryptionMethod, setEncryptionMethod] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [encryptionProgress, setEncryptionProgress] = useState<number>(0);
   const [encryptionError, setEncryptionError] = useState<string>('');
 
-  const handleSelectedFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectedFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       setSelectedFile(event.target.files[0]);
     }
-  };
+  }, []);
 
-  const handleEncryptionMethodChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleEncryptionMethodChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     setEncryptionMethod(event.target.value);
-  };
+  }, []);
 
-  const initiateEncryptionProcess = async () => {
+  const initiateEncryptionProcess = useCallback(async () => {
     if (!selectedFile || !encryptionMethod) {
       setEncryptionError('Both file and encryption method must be selected.');
       return;
@@ -38,7 +38,8 @@ const FileEncryptionTool: React.FC = () => {
 
     try {
       for (let i = 0; i <= 100; i += 10) {
-        setEncryptionProgress(i);
+        // Using functional update to ensure we have the latest state
+        setEncryptionProgress((prevProgress) => prevProgress + 10);
         await new Promise((resolve) => setTimeout(resolve, 100)); // Simulating encryption progress
       }
 
@@ -47,7 +48,7 @@ const FileEncryptionTool: React.FC = () => {
       const errorMsg = error instanceof Error ? error.message : 'An unknown error occurred during encryption.';
       setEncryptionError(errorMsg);
     }
-  };
+  }, [selectedFile, encryptionMethod]);
 
   return (
     <div>
@@ -74,6 +75,6 @@ const FileEncryptionTool: React.FC = () => {
       {encryptionError && <div style={{ color: 'red' }}>Error: {encryptionError}</div>}
     </div>
   );
-};
+});
 
 export default FileEncryptionTool;
