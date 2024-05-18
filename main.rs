@@ -23,29 +23,37 @@ async fn decrypt(mut payload: Multipart, data: web::Data<AppState>) -> impl Resp
 }
 
 async fn process_file(payload: &mut Multipart, tool_path: &str, success_message: &str, error_message: &str) -> impl Responder {
+    let mut has_processed_file = false;
     while let Some(item) = payload.next().await {
         let mut field = match item {
             Ok(f) => f,
             Err(_) => return HttpResponse::BadRequest().body("Invalid file upload"),
         };
 
-        let filepath = field.content_disposition().get_filename()
-            .map(|name| format!("./{}", name))
-            .ok_or_else(|| HttpResponse::BadRequest().body("Filename missing from content disposition"))?;
+        let filepath = match field.content_disposition().get_filename() {
+            Some(name) => format!("./{}", name),
+            None => return HttpResponse::BadRequest().body("Filename missing from content disposition"),
+        };
 
-        let mut file = File::create(&filepath)
-            .map_err(|_| HttpResponse::InternalServerError().body("Failed to create file"))?;
-
-        if let Err(_) = write_file(&mut field, &mut file).await {
-            return HttpResponse::BadRequest().body("Failed to write file");
-        }
-
-        if let Err(response) = execute_tool(tool_path, &filepath, success_message, error_message){
-            return response;
+        match File::create(&filepath) {
+            Ok(mut file) => {
+                if write_file(&mut field, &mut file).await.is_err() {
+                    return HttpResponse::BadRequest().body("Failed to write file");
+                }
+                match execute_tool(tool_path, &filepath, success_message, error_message) {
+                    Ok(_) => has_processed_file = true,
+                    Err(response) => return response,
+                }
+            }
+            Err(_) => return HttpResponse::InternalServerError().body("Failed to create file"),
         }
     }
 
-    HttpResponse::BadRequest().body("No file uploaded")
+    if has_processed_file {
+        HttpResponse::Ok().body(success_message)
+    } else {
+        HttpResponse::BadRequest().body("No file uploaded")
+    }
 }
 
 async fn write_file(field: &mut actix_multipart::Field, file: &mut File) -> io::Result<()> {
@@ -58,15 +66,14 @@ async fn write_file(field: &mut actix_multipart::Field, file: &mut File) -> io::
 
 fn execute_tool(tool_path: &str, filepath: &str, success_message: &str, error_message: &str) -> Result<(), HttpResponse> {
     let output = Command::new(tool_path)
-        .arg(filepath)
-        .output();
+    .arg(filepath)
+    .output();
 
     match output {
         Ok(output) if output.status.success() => Ok(()),
         Ok(_) => Err(HttpResponse::InternalServerError().body(error_message)),
         Err(_) => Err(HttpResponse::InternalServerError().body("Failed to execute process")),
-    }.map_err(|resp| resp)
-     .or_else(|_| Ok(HttpResponse::Ok().body(success_message)))
+    }
 }
 
 #[actix_web::main]
