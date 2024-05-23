@@ -1,14 +1,21 @@
-use aes_gcm::{Aes256Gcm, aead::{Aead, NewAead, generic_array::GenericArray}};
+use aes_gcm::{aead::{Aead, NewAead}, Aes256Gcm, generic_array::GenericArray};
 use hex;
-use std::{env, fs::File, io::{self, Read, Write}, path::Path};
-use std::io::ErrorKind;
+use std::{
+    env,
+    fs::File,
+    io::{self, Read, Write},
+    path::Path,
+};
 
 mod file_decryptor {
     use super::*;
 
     pub fn decrypt_file(file_path: &Path, key: &[u8], nonce: &[u8]) -> io::Result<()> {
         if !verify_permissions() {
-            return Err(io::Error::new(ErrorKind::PermissionDenied, "Insufficient permissions."));
+            return Err(io::Error::new(
+                ErrorKind::PermissionDenied,
+                "Insufficient permissions.",
+            ));
         }
 
         let mut file = File::open(file_path)?;
@@ -19,13 +26,14 @@ mod file_decryptor {
         let nonce = GenericArray::from_slice(nonce);
 
         // Decrypt in-place to avoid unnecessary copying
-        let decrypted_contents = cipher.decrypt(nonce, encrypted_contents.as_ref())
+        let decrypted_contents = cipher
+            .decrypt(nonce, encrypted_contents.as_ref())
             .map_err(|_| io::Error::new(ErrorKind::InvalidData, "Decryption failed"))?;
 
         // Overwrite the file with decrypted contents
         let mut file = File::create(file_path)?;
         file.write_all(&decrypted_contents)?;
-        
+
         Ok(())
     }
 
@@ -38,17 +46,16 @@ fn main() -> io::Result<()> {
     dotenv::dotenv().ok();
 
     let file_to_decrypt = Path::new("encrypted_file.dat");
-  
+
     let decryption_key = hex::decode(env::var("DECRYPTION_KEY").expect("DECRYPTION_KEY must be set"))
         .expect("Failed to decode DECRYPTION_KEY");
     let nonce = hex::decode(env::var("DECRYPTION_NONCE").expect("DECRYPTION_NONCE must be set"))
         .expect("Failed to decode DECRYPTION_NONCE");
 
-    file_decryptor::decrypt_file(file_to_decrypt, &decryption_key, &nonce)
-        .map_err(|e| {
-            eprintln!("Error decrypting file: {}", e);
-            e
-        })?;
+    file_decryptor::decrypt_file(&file_to_decrypt, &decryption_key, &nonce).map_err(|e| {
+        eprintln!("Error decrypting file: {}", e);
+        e
+    })?;
 
     println!("File successfully decrypted.");
     Ok(())
