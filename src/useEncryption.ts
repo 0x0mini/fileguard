@@ -1,67 +1,67 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const useFileEncrypt = () => {
-  const [file, setFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+const useFileEncryption = () => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isBusy, setIsBusy] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileSelectionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setError(null);
-      setFile(event.target.files[0]);
+      setErrorMessage(null);
+      setSelectedFile(event.target.files[0]);
     }
   };
 
-  const encryptFile = async () => {
-    if (file) {
-      setIsProcessing(true);
+  const performFileEncryption = async () => {
+    if (selectedFile) {
+      setIsBusy(true);
       try {
         const formData = new FormData();
-        formData.append('file', file);
-        const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/encrypt`, formData, {
+        formData.append('file', selectedFile);
+        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/encrypt`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
-        setIsProcessing(false);
+        setIsBusy(false);
       } catch (err) {
-        setIsProcessing(false);
-        setError(err.response?.data?.message || 'An error occurred during file encryption.');
+        setIsBusy(false);
+        setErrorMessage(err.response?.data?.message || 'An error occurred during file encryption.');
       }
     } else {
-      setError('No file selected for encryption.');
+      setErrorMessage('No file selected for encryption.');
     }
   };
 
-  const decryptFile = async () => {
-    if (file) {
-      setIsProcessing(true);
+  const performFileDecryption = async () => {
+    if (selectedFile) {
+      setIsBusy(true);
       try {
         const formData = new FormData();
-        formData.append('file', file);
-        const response = await axios.post(`${process.env.REACT_APP_BACKEND_URL}/decrypt`, formData, {
+        formData.append('file', selectedFile);
+        await axios.post(`${process.env.REACT_APP_BACKEND_URL}/decrypt`, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
-        setIsProcessing(false);
+        setIsBusy(false);
       } catch (err) {
-        setIsProcessing(false);
-        setError(err.response?.data?.message || 'An error occurred during file decryption.');
+        setIsBusy(false);
+        setErrorMessage(err.response?.data?.message || 'An error occurred during file decryption.');
       }
     } else {
-      setError('No file selected for decryption.');
+      setErrorMessage('No file selected for decryption.');
     }
   };
 
   return {
-    handleFileChange,
-    encryptFile,
-    decryptFile,
-    isProcessing,
-    error,
+    onFileSelectionChange,
+    performFileEncryption,
+    performFileDecryption,
+    isBusy,
+    errorMessage,
   };
 };
 
-export default useFileEncrypt;
+export default useFileEncryption;
