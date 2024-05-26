@@ -3,7 +3,7 @@ use hex;
 use std::{
     env,
     fs::File,
-    io::{self, Read, Write},
+    io::{self, Read, Write, ErrorKind},
     path::Path,
 };
 
@@ -23,14 +23,11 @@ mod file_decryptor {
         file.read_to_end(&mut encrypted_contents)?;
 
         let cipher = Aes256Gcm::new(GenericArray::from_slice(key));
-        let nonce = GenericArray::from_slice(nonce);
 
-        // Decrypt in-place to avoid unnecessary copying
         let decrypted_contents = cipher
-            .decrypt(nonce, encrypted_contents.as_ref())
+            .decrypt(GenericArray::from_slice(nonce), encrypted_contents.as_ref())
             .map_err(|_| io::Error::new(ErrorKind::InvalidData, "Decryption failed"))?;
 
-        // Overwrite the file with decrypted contents
         let mut file = File::create(file_path)?;
         file.write_all(&decrypted_contents)?;
 
