@@ -2,8 +2,8 @@ use aes_gcm::{aead::{Aead, NewAead}, Aes256Gcm, generic_array::GenericArray};
 use hex;
 use std::{
     env,
-    fs::File,
-    io::{self, Read, Write, ErrorKind},
+    fs::{self, File},
+    io::{self, ErrorKind},
     path::Path,
 };
 
@@ -18,9 +18,7 @@ mod file_decryptor {
             ));
         }
 
-        let mut file = File::open(file_path)?;
-        let mut encrypted_contents = Vec::new();
-        file.read_to_end(&mut encrypted_contents)?;
+        let encrypted_contents = fs::read(file_path)?;
 
         let cipher = Aes256Gcm::new(GenericArray::from_slice(key));
 
@@ -28,8 +26,7 @@ mod file_decryptor {
             .decrypt(GenericArray::from_slice(nonce), encrypted_contents.as_ref())
             .map_err(|_| io::Error::new(ErrorKind::InvalidData, "Decryption failed"))?;
 
-        let mut file = File::create(file_path)?;
-        file.write_all(&decrypted_contents)?;
+        fs::write(file_path, decrypted_contents)?;
 
         Ok(())
     }
@@ -49,10 +46,10 @@ fn main() -> io::Result<()> {
     let nonce = hex::decode(env::var("DECRYPTION_NONCE").expect("DECRYPTION_NONCE must be set"))
         .expect("Failed to decode DECRYPTION_NONCE");
 
-    file_decryptor::decrypt_file(&file_to_decrypt, &decryption_key, &nonce).map_err(|e| {
+    if let Err(e) = file_decryptor::decrypt_file(&file_to_decrypt, &decryption_key, &nonce) {
         eprintln!("Error decrypting file: {}", e);
-        e
-    })?;
+        return Err(e);
+    }
 
     println!("File successfully decrypted.");
     Ok(())
