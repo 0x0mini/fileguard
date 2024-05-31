@@ -5,11 +5,13 @@ const useFileEncryption = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isBusy, setIsBusy] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number>(0); // Progress state to track upload progress
 
   const onFileSelectionChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       setErrorMessage(null);
       setSelectedFile(event.target.files[0]);
+      setProgress(0); // Reset progress on new file selection
     } else {
       // Handle case where file selection is cleared
       setSelectedFile(null);
@@ -30,10 +32,15 @@ const useFileEncryption = () => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setProgress(percentCompleted);
+        },
       });
     } catch (err) {
       const message = err.response?.data?.message ?? 'An unexpected error occurred during file encryption.';
       setErrorMessage(message);
+      setProgress(0); // Reset progress on failure
     } finally {
       setIsBusy(false);
     }
@@ -52,10 +59,15 @@ const useFileEncryption = () => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setProgress(percentCompleted);
+        },
       });
     } catch (err) {
       const message = err.response?.data?.message ?? 'An unexpected error occurred during file decryption.';
       setErrorMessage(message);
+      setProgress(0); // Reset progress on failure
     } finally {
       setIsBusy(false);
     }
@@ -67,6 +79,7 @@ const useFileEncryption = () => {
     performFileDecryption,
     isBusy,
     errorMessage,
+    progress, // Expose progress for UI components to display
   };
 };
 
