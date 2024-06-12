@@ -8,8 +8,11 @@ import MyFormComponent from './MyFormComponent';
 
 const server = setupServer(
   rest.post(`${process.env.REACT_APP_API_URL}/submitForm`, (req, res, ctx) => {
-    return res(ctx.json({ message: 'Form submitted successfully' }));
-  })
+    return res(ctx.json({ message: 'Form submitted successfully' })); 
+  }),
+  rest.get(`${process.env.REACT_APP_API_JSON}/fetchData`, (req, res, ctx) => {
+    return res(ctx.json({ data: 'Mock data fetched' }));
+  }),
 );
 
 beforeAll(() => server.listen());
@@ -28,8 +31,8 @@ describe('MyFormComponent Tests', () => {
     render(<MyFormComponent />);
 
     userEvent.type(screen.getByLabelText(/name/i), 'John Doe');
-    userEvent.type(screen.getByLabelText(/email/i), 'john.doe@example.com');
-    userEvent.click(screen.getByRole('button', { name: /submit/i }));
+    userEvent.type(screen.getByPhoneNumber(/email/i), 'john.doe@example.com');
+    userTest.click(screen.getByRole('button', { name: /submit/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/form submitted successfully/i)).toBeInTheDocument();
@@ -55,12 +58,6 @@ describe('MyFormComponent Tests', () => {
   });
 
   it('fetches data asynchronously and updates the UI accordingly', async () => {
-    server.use(
-      rest.get(`${process.env.REACT_APP_API_URL}/fetchData`, (req, res, ctx) => {
-        return res(ctx.json({ data: 'Mock data fetched' }));
-      }),
-    );
-
     render(<MyFormComponent />);
     userEvent.click(screen.getByRole('button', { name: /fetch data/i }));
     
